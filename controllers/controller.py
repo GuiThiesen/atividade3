@@ -1,22 +1,19 @@
-# controllers/controller.py
-from dao.dao_psycopg import PedidoDAO as PedidoDAOPsycopg
-from dao.dao_sqlalchemy import PedidoDAO as PedidoDAOSQLAlchemy
+from dao.dao_psycopg import OrderManager
+from models.models_psycopg import Order
 
-class PedidoController:
-    def __init__(self, dao_type='psycopg', db_config=None, db_url=None):
-        if dao_type == 'psycopg':
-            self.dao = PedidoDAOPsycopg(db_config)
-        elif dao_type == 'sqlalchemy':
-            self.dao = PedidoDAOSQLAlchemy(db_url)
+class OrderController:
+    def __init__(self, db_url):
+        self.order_manager = OrderManager(db_url)
 
-    def inserir_pedido(self, pedido):
-        self.dao.inserir_pedido(pedido)
-
-    def relatorio_pedido(self, pedido_id):
-        return self.dao.relatorio_pedido(pedido_id)
-
-    def relatorio_ranking(self, start_date, end_date):
-        return self.dao.relatorio_ranking(start_date, end_date)
-
-    def close(self):
-        self.dao.close()
+    def process_order(self, order):
+        customer_id = self.order_manager.get_customer(order.customer_name)
+        if not customer_id:
+            raise ValueError(f"Cliente {order.customer_name} não existe.")
+        
+        employee_id = self.order_manager.get_employee(order.employee_name)
+        if not employee_id:
+            raise ValueError(f"Funcionário {order.employee_name} não existe.")
+        
+        order_id = self.order_manager.insert_order(customer_id, employee_id, order.order_date)
+        self.order_manager.insert_order_details(order_id, order.items)
+        self.order_manager.close_connection()
